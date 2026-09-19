@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import fitz
 
 app = FastAPI()
+
 def chunk_text(text, chunk_size=1000, overlap=200):
     chunks = []
 
@@ -44,6 +45,9 @@ def ask_question(request: QuestionRequest):
         "question_received": request.question
     }
 
+
+
+
 @app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
     pdf_bytes = await file.read()
@@ -65,3 +69,5 @@ async def upload_pdf(file: UploadFile = File(...)):
     "total_chunks": len(chunks),
     "chunks": chunks
     }
+
+
