@@ -43,3 +43,7 @@ next-env.d.ts
 backend/venv/
 __pycache__/
 *.pyc
+# ChromaDB
+backend/chroma_db/
+# Environment variables
+.env
