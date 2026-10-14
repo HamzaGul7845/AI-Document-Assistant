@@ -6,6 +6,10 @@ export default function Home() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
+  const [uploadError, setUploadError] = useState("");
 
   const handleAskAI = async () => {
     if (!question.trim()) return;
@@ -23,10 +27,13 @@ export default function Home() {
           question: question,
         }),
       });
+      if (!response.ok) {
+  throw new Error("Failed to get AI answer");
+}
 
       const data = await response.json();
 
-      setAnswer(data.question_received);
+      setAnswer(data.answer);
     } catch (error) {
       setAnswer("Something went wrong. Please try again.");
       console.error(error);
@@ -34,6 +41,41 @@ export default function Home() {
       setLoading(false);
     }
   };
+
+  const handleUpload = async () => {
+  if (!selectedFile) {
+    setUploadError("Please select a PDF first.");
+    return;
+  }
+
+  setUploading(true);
+  setUploadError("");
+  setUploadResult(null);
+
+  try {
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+
+    const response = await fetch("http://127.0.0.1:8000/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("PDF upload failed");
+    }
+
+    const data = await response.json();
+
+    setUploadResult(data);
+    console.log("Upload successful:", data);
+  } catch (error) {
+    console.error(error);
+    setUploadError("Unable to upload PDF. Please try again.");
+  } finally {
+    setUploading(false);
+  }
+};
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -69,23 +111,76 @@ export default function Home() {
 
         {/* Upload Card */}
         <div className="mb-8 rounded-2xl border border-dashed border-slate-700 bg-slate-900/70 p-10 text-center">
-          <div className="mb-4 text-5xl">📄</div>
 
-          <h3 className="text-lg font-semibold">
-            Upload your PDF
-          </h3>
+  <div className="mb-4 text-5xl">📄</div>
 
-          <p className="mt-2 text-sm text-slate-400">
-            PDF upload functionality will be added next.
-          </p>
+  <h3 className="text-lg font-semibold">
+    Upload your PDF
+  </h3>
 
-          <button
-            onClick={() => console.log("Upload PDF clicked")}
-            className="mt-6 rounded-lg bg-white px-5 py-2.5 font-medium text-slate-900 transition hover:bg-slate-200 active:scale-95"
-          >
-            Choose PDF
-          </button>
-        </div>
+  <p className="mt-2 text-sm text-slate-400">
+    Select a PDF to extract and store its content for AI search.
+  </p>
+
+  <input
+    type="file"
+    accept=".pdf,application/pdf"
+    onChange={(e) => {
+      const file = e.target.files?.[0] || null;
+
+      setSelectedFile(file);
+      setUploadResult(null);
+      setUploadError("");
+
+      if (file && file.type !== "application/pdf") {
+        setSelectedFile(null);
+        setUploadError("Only PDF files are allowed.");
+      }
+    }}
+    className="mt-6 block w-full cursor-pointer rounded-lg border border-slate-700 bg-slate-950 p-3 text-sm text-slate-300 file:mr-4 file:rounded-md file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-white"
+  />
+
+  {selectedFile && (
+    <p className="mt-4 text-sm text-slate-300">
+      Selected: {selectedFile.name}
+    </p>
+  )}
+
+  <button
+    onClick={handleUpload}
+    disabled={!selectedFile || uploading}
+    className="mt-6 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+  >
+    {uploading ? "Processing PDF..." : "Upload PDF"}
+  </button>
+
+  {uploadResult && (
+    <div className="mt-6 rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-left text-sm text-green-300">
+      <p className="font-semibold">
+        ✓ PDF processed successfully!
+      </p>
+
+      <p className="mt-2">
+        Filename: {uploadResult.filename}
+      </p>
+
+      <p>
+        Total chunks: {uploadResult.total_chunks}
+      </p>
+
+      <p>
+        Embedding dimensions: {uploadResult.embedding_dimension}
+      </p>
+    </div>
+  )}
+
+  {uploadError && (
+    <p className="mt-4 text-sm text-red-400">
+      {uploadError}
+    </p>
+  )}
+
+</div>
 
         {/* Question Box */}
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
